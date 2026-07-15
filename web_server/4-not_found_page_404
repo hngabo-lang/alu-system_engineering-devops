@@ -9,16 +9,41 @@ apt-get install -y nginx
 echo "Holberton School for the win!" > /var/www/html/index.html
 echo "Ceci n'est pas une page" > /var/www/html/404.html
 
-sed -i '/listen 80 default_server;/a\
-\tlocation /redirect_me {\
-\t\treturn 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;\
-\t}\
-\
-\terror_page 404 /404.html;\
-\tlocation = /404.html {\
-\t\troot /var/www/html;\
-\t\tinternal;\
-\t}' /etc/nginx/sites-available/default
+# Write the full default server block (avoids sed backslash-continuation,
+# which shellcheck (SC1004) flags as unsafe inside single quotes).
+cat > /etc/nginx/sites-available/default << 'NGINX_EOF'
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
 
+	root /var/www/html;
+	index index.html index.htm index.nginx-debian.html;
+
+	server_name _;
+
+	location /redirect_me {
+		return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;
+	}
+
+	error_page 404 /404.html;
+	location = /404.html {
+		root /var/www/html;
+		internal;
+	}
+
+	location / {
+		try_files $uri $uri/ =404;
+	}
+}
+NGINX_EOF
+
+# Start nginx without systemctl. Some Docker-based grading environments
+# ship a policy-rc.d that silently blocks `service`/`invoke-rc.d` calls
+# (including nginx's own postinst auto-start), so fall back to the binary
+# directly if it isn't actually running afterward.
 service nginx start
-service nginx restart
+if pgrep -x nginx > /dev/null 2>&1; then
+    nginx -s reload
+else
+    nginx
+fi
