@@ -9,3 +9,11 @@ echo "Holberton School for the win!" > /var/www/html/index.html
 
 # Start nginx without systemctl
 service nginx start
+
+# Some Docker-based grading environments ship a policy-rc.d that silently
+# blocks `service`/`invoke-rc.d` calls (including nginx's own postinst
+# auto-start), so `service nginx start` can succeed with no error yet leave
+# nginx not actually running. Fall back to the binary directly in that case.
+if ! pgrep -x nginx > /dev/null 2>&1; then
+    nginx
+fi
