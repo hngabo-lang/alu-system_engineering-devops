@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Installs nginx, serves a page containing "Holberton School", and configures
+# /redirect_me to return a 301 Moved Permanently redirect.
+
+apt-get update -y
+apt-get install -y nginx
+
+echo "Holberton School for the win!" > /var/www/html/index.html
+
+# Insert a redirect location block right after the "listen 80 default_server;"
+# line inside the server block, using sed (append after match).
+sed -i '/listen 80 default_server;/a\
+\tlocation /redirect_me {\
+\t\treturn 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;\
+\t}' /etc/nginx/sites-available/default
+
+# Start (or restart, without systemctl) nginx to pick up the new config
+service nginx start
+service nginx restart
