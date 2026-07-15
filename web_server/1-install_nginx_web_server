@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Installs nginx and configures it to serve a page containing "Holberton School"
+# on port 80. Does not use systemctl to start/restart nginx.
+
+apt-get update -y
+apt-get install -y nginx
+
+echo "Holberton School for the win!" > /var/www/html/index.html
+
+# Start nginx without systemctl
+service nginx start
