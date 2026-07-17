@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+# Configures Nginx so every HTTP response includes a custom X-Served-By
+# header whose value is this server's hostname.
 apt-get update -y
 apt-get install -y nginx
 
-echo "Holberton School" > /var/www/html/index.html
+echo "Holberton School for the win!" > /var/www/html/index.html
 
 cat > /etc/nginx/sites-available/default << NGINX_EOF
 server {
@@ -28,4 +30,3 @@ if pgrep -x nginx > /dev/null 2>&1; then
 else
     nginx
 fi
-
