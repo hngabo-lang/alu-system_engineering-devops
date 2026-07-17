@@ -7,10 +7,10 @@
 # web-01 and web-02 servers, and WEB_01_HOSTNAME / WEB_02_HOSTNAME with
 # their configured hostnames, before running this on lb-01.
 
-WEB_01_IP="WEB_01_IP"
-WEB_02_IP="WEB_02_IP"
-WEB_01_HOSTNAME="WEB_01_HOSTNAME"
-WEB_02_HOSTNAME="WEB_02_HOSTNAME"
+WEB_01_IP="web_01_IP"
+WEB_02_IP="web_02_IP"
+WEB_01_HOSTNAME="web_01_HOSTNAME"
+WEB_02_HOSTNAME="web_02_HOSTNAME"
 
 apt-get update -y
 apt-get install -y haproxy
@@ -48,8 +48,8 @@ frontend http_front
 
 backend http_back
     balance roundrobin
-    server ${WEB_01_HOSTNAME} ${WEB_01_IP}:80 check
-    server ${WEB_02_HOSTNAME} ${WEB_02_IP}:80 check
+    server ${WEB_01_HOSTNAME} ${web_01_IP}:80 check
+    server ${WEB_02_HOSTNAME} ${web_02_IP}:80 check
 HAPROXY_EOF
 
 # On Ubuntu, HAProxy's init script refuses to start unless explicitly
