@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Installs and configures HAProxy on lb-01 to load-balance traffic to
+# web-01 and web-02 using round-robin, managed via the init script
+# (not systemctl). Configures a brand new Ubuntu machine.
+#
+# NOTE: replace WEB_01_IP and WEB_02_IP below with the actual IPs of your
+# web-01 and web-02 servers before running this on lb-01.
+
+WEB_01_IP="WEB_01_IP"
+WEB_02_IP="WEB_02_IP"
+
+apt-get update -y
+apt-get install -y haproxy
+
+cat > /etc/haproxy/haproxy.cfg << HAPROXY_EOF
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    timeout connect 5000
+    timeout client  50000
+    timeout server  50000
+    errorfile 400 /etc/haproxy/errors/400.http
+    errorfile 403 /etc/haproxy/errors/403.http
+    errorfile 408 /etc/haproxy/errors/408.http
+    errorfile 500 /etc/haproxy/errors/500.http
+    errorfile 502 /etc/haproxy/errors/502.http
+    errorfile 503 /etc/haproxy/errors/503.http
+    errorfile 504 /etc/haproxy/errors/504.http
+
+frontend http_front
+    bind *:80
+    default_backend http_back
+
+backend http_back
+    balance roundrobin
+    server web-01 ${WEB_01_IP}:80 check
+    server web-02 ${WEB_02_IP}:80 check
+HAPROXY_EOF
+
+# On Ubuntu, HAProxy's init script refuses to start unless explicitly
+# enabled in /etc/default/haproxy - without this, `service haproxy start`
+# silently does nothing.
+if [ -f /etc/default/haproxy ]; then
+    sed -i 's/^ENABLED=.*/ENABLED=1/' /etc/default/haproxy
+    if ! grep -q '^ENABLED=' /etc/default/haproxy; then
+        echo "ENABLED=1" >> /etc/default/haproxy
+    fi
+else
+    echo "ENABLED=1" > /etc/default/haproxy
+fi
+
+service haproxy start
+if ! pgrep -x haproxy > /dev/null 2>&1; then
+    service haproxy restart
+fi
+
+if ! pgrep -x haproxy > /dev/null 2>&1; then
+    echo "ERROR: haproxy failed to start" >&2
+    exit 1
+fi
