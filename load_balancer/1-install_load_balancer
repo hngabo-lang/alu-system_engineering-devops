@@ -4,13 +4,10 @@
 # (not systemctl). Configures a brand new Ubuntu machine.
 #
 # NOTE: replace WEB_01_IP and WEB_02_IP below with the actual IPs of your
-# web-01 and web-02 servers, and WEB_01_HOSTNAME / WEB_02_HOSTNAME with
-# their configured hostnames, before running this on lb-01.
+# web-01 and web-02 servers before running this on lb-01.
 
-WEB_01_IP="web_01_IP"
-WEB_02_IP="web_02_IP"
-WEB_01_HOSTNAME="web_01"
-WEB_02_HOSTNAME="web_02"
+WEB_01_IP="WEB_01_IP"
+WEB_02_IP="WEB_02_IP"
 
 apt-get update -y
 apt-get install -y haproxy
@@ -48,8 +45,8 @@ frontend http_front
 
 backend http_back
     balance roundrobin
-    server ${WEB_01_HOSTNAME} ${WEB_01_IP}:80 check
-    server ${WEB_02_HOSTNAME} ${WEB_02_IP}:80 check
+    server web-01 ${WEB_01_IP}:80 check
+    server web-02 ${WEB_02_IP}:80 check
 HAPROXY_EOF
 
 # On Ubuntu, HAProxy's init script refuses to start unless explicitly
