@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
-# Installs and configures HAProxy on lb-01 to load-balance traffic to
-# web-01 and web-02 using round-robin, managed via the init script
-# (not systemctl). Configures a brand new Ubuntu machine.
-#
-# NOTE: replace WEB_01_IP and WEB_02_IP below with the actual IPs of your
-# web-01 and web-02 servers before running this on lb-01.
+# Installs and configures HAProxy on lb-01 to load balance web-01 and web-02
+# using a round-robin algorithm.
 
-WEB_01_IP="WEB_01_IP"
-WEB_02_IP="WEB_02_IP"
+set -e
 
+# Update package list and install HAProxy
 apt-get update -y
 apt-get install -y haproxy
 
-cat > /etc/haproxy/haproxy.cfg << HAPROXY_EOF
+# Enable HAProxy in the default config so it can be managed via init script
+sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy
+
+# Backup existing config
+if [ -f /etc/haproxy/haproxy.cfg ]; then
+    cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak
+fi
+
+# Write new HAProxy configuration
+cat > /etc/haproxy/haproxy.cfg << 'EOF'
 global
     log /dev/log local0
     log /dev/log local1 notice
@@ -39,34 +44,15 @@ defaults
     errorfile 503 /etc/haproxy/errors/503.http
     errorfile 504 /etc/haproxy/errors/504.http
 
-frontend http_front
+frontend http-in
     bind *:80
-    default_backend http_back
+    default_backend web_servers
 
-backend http_back
+backend web_servers
     balance roundrobin
-    server web-01 ${WEB_01_IP}:80 check
-    server web-02 ${WEB_02_IP}:80 check
-HAPROXY_EOF
+    server 7140-web-01 3.95.28.22:80 check
+    server 7140-web-02 13.222.247.224:80 check
+EOF
 
-# On Ubuntu, HAProxy's init script refuses to start unless explicitly
-# enabled in /etc/default/haproxy - without this, `service haproxy start`
-# silently does nothing.
-if [ -f /etc/default/haproxy ]; then
-    sed -i 's/^ENABLED=.*/ENABLED=1/' /etc/default/haproxy
-    if ! grep -q '^ENABLED=' /etc/default/haproxy; then
-        echo "ENABLED=1" >> /etc/default/haproxy
-    fi
-else
-    echo "ENABLED=1" > /etc/default/haproxy
-fi
-
-service haproxy start
-if ! pgrep -x haproxy > /dev/null 2>&1; then
-    service haproxy restart
-fi
-
-if ! pgrep -x haproxy > /dev/null 2>&1; then
-    echo "ERROR: haproxy failed to start" >&2
-    exit 1
-fi
+# Restart HAProxy to apply the new configuration
+service haproxy restart
